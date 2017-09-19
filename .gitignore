@@ -1,3 +1,4 @@
+.idea
 .cache
 .ve2?
 .ve3?
@@ -10,6 +11,3 @@ reports
 django_jenkins.egg-info/
 MANIFEST
 geckodriver.log
-
-
-
