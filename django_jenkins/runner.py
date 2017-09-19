@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import traceback
 from unittest import TextTestResult
 
 from xml.etree import ElementTree as ET
@@ -105,6 +106,13 @@ class EXMLTestResult(TextTestResult):
         test_result.set('type', '%s.%s' % (exc_class.__module__, exc_class.__name__))
         test_result.set('message', smart_text(exc_value))
         test_result.text = smart_text(tb_str)
+
+    def _exc_info_to_string(self, err, test):
+        try:
+            return super(EXMLTestResult, self)._exc_info_to_string(err, test)
+        except Exception:
+            traceback.print_exception(*err)
+            return ''
 
     def dump_xml(self, output_dir):
         """
