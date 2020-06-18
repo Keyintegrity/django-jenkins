@@ -1,7 +1,9 @@
 import os
 import sys
 import time
+import traceback
 from unittest import TextTestResult
+from unittest.result import STDOUT_LINE, STDERR_LINE
 
 from xml.etree import ElementTree as ET
 
@@ -105,6 +107,43 @@ class EXMLTestResult(TextTestResult):
         test_result.set('type', '%s.%s' % (exc_class.__module__, exc_class.__name__))
         test_result.set('message', smart_text(exc_value))
         test_result.text = smart_text(tb_str)
+
+    def _exc_info_to_string(self, err, test):
+        """Converts a sys.exc_info()-style tuple of values into a string."""
+        exctype, value, tb = err
+        # Skip test runner traceback levels
+        while tb and self._is_relevant_tb_level(tb):
+            tb = tb.tb_next
+
+        if exctype is test.failureException:
+            # Skip assert*() traceback levels
+            length = self._count_relevant_tb_levels(tb)
+        else:
+            length = None
+
+        tb_e = traceback.TracebackException(
+            exctype, value, tb, limit=length, capture_locals=self.tb_locals
+        )
+        msg_lines = list(tb_e.format())
+
+        if self.buffer:
+            # When running tests in parallel mode, sys.stdout and sys.stderr
+            # may not be substituted with StringIO at this point. We need to
+            # check for that.
+            output = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
+            error = sys.stderr.getvalue() if hasattr(sys.stderr, 'getvalue') else ''
+
+            if output:
+                if not output.endswith('\n'):
+                    output += '\n'
+                msg_lines.append(STDOUT_LINE % output)
+
+            if error:
+                if not error.endswith('\n'):
+                    error += '\n'
+                msg_lines.append(STDERR_LINE % error)
+
+        return ''.join(msg_lines)
 
     def dump_xml(self, output_dir):
         """
